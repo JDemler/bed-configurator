@@ -159,9 +159,9 @@ export class RouterTemplateCalculator {
             const indexHoleR = 2.5;
 
             // Hole 1 (Center)
-            svg += `<circle class="engrave" cx="${indexX}" cy="${indexY}" r="${indexHoleR}" />`;
-            // Hole 2 (Offset by 15mm)
-            svg += `<circle class="engrave" cx="${indexX}" cy="${indexY + 15}" r="${indexHoleR}" />`;
+            svg += `<circle class="engrave" cx="${indexX}" cy="${indexY - 25}" r="${indexHoleR}" />`;
+            // Hole 2 (Offset by 25mm)
+            svg += `<circle class="engrave" cx="${indexX}" cy="${indexY + 25}" r="${indexHoleR}" />`;
 
             svg += `<text x="${indexX}" y="${indexY - 4}" class="text" text-anchor="middle">Index</text>`;
 
