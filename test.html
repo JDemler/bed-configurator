@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Index-Frässchablone SVG Generator</title>
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+
+        label {
+            display: block;
+            margin-top: 8px;
+        }
+
+        svg {
+            border: 1px solid #aaa;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>Index-Frässchablone – SVG Generator</h2>
+
+    <!-- Konfiguration -->
+    <label>Langloch Breite (mm): <input id="slotWidth" type="number" value="18"></label>
+    <label>Langloch Länge (mm): <input id="slotLength" type="number" value="40"></label>
+    <label>Lochabstand / Pitch (mm): <input id="pitch" type="number" value="80"></label>
+
+    <hr>
+
+    <label>Fräser Ø (mm): <input id="bit" type="number" value="10"></label>
+    <label>Kopierring Ø (mm): <input id="guide" type="number" value="20"></label>
+
+    <hr>
+
+    <label>Indexloch Ø (mm): <input id="indexDia" type="number" value="6"></label>
+    <label>Schablonenbreite (mm): <input id="plateWidth" type="number" value="140"></label>
+    <label>Schablonenhöhe (mm): <input id="plateHeight" type="number" value="120"></label>
+
+    <button onclick="generate()">SVG erzeugen</button>
+    <button onclick="downloadSVG()">SVG herunterladen</button>
+
+    <div id="output"></div>
+
+    <script>
+        let currentSVG = "";
+
+        function generate() {
+            const slotW = +slotWidth.value;
+            const slotL = +slotLength.value;
+            const pitchVal = +pitch.value;
+            const bitDia = +bit.value;
+            const guideDia = +guide.value;
+            const indexD = +indexDia.value;
+            const pw = +plateWidth.value;
+            const ph = +plateHeight.value;
+
+            const offset = (guideDia - bitDia) / 2;
+
+            // Schablonenmaße der Fräsöffnung
+            const tplW = slotW + 2 * offset;
+            const tplL = slotL + 2 * offset;
+
+            const cy = ph / 2;
+
+            // Langloch bewusst nach links setzen
+            const slotCenterX = pw / 2 - pitchVal / 2;
+
+            // Indexloch Pitch-rechts vom Langloch
+            const indexX = slotCenterX + pitchVal;
+
+            const slotX = slotCenterX - tplL / 2;
+            const slotY = cy - tplW / 2;
+
+            const indexY = cy;
+
+            currentSVG = `
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="${pw}mm" height="${ph}mm"
+     viewBox="0 0 ${pw} ${ph}">
+
+  <!-- Außenkontur -->
+  <rect x="0" y="0" width="${pw}" height="${ph}"
+        fill="none" stroke="red" stroke-width="0.2"/>
+
+  <!-- Langloch -->
+  <rect x="${slotX}" y="${slotY}"
+        width="${tplL}" height="${tplW}"
+        rx="${tplW / 2}" ry="${tplW / 2}"
+        fill="none" stroke="red" stroke-width="0.2"/>
+
+  <!-- Indexloch -->
+  <circle cx="${indexX}" cy="${indexY}"
+          r="${indexD / 2}"
+          fill="none" stroke="red" stroke-width="0.2"/>
+
+  <!-- Gravur -->
+  <text x="10" y="${ph - 10}" font-size="6"
+        fill="blue">Pitch ${pitchVal} mm</text>
+</svg>
+`;
+
+            document.getElementById("output").innerHTML = currentSVG;
+        }
+
+        function downloadSVG() {
+            const blob = new Blob([currentSVG], { type: "image/svg+xml" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = "index_fraessschablone.svg";
+            a.click();
+        }
+    </script>
+
+</body>
+
+</html>
