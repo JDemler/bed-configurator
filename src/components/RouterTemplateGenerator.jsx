@@ -13,7 +13,8 @@ export function RouterTemplateGenerator() {
         slotCount: 3,
         slotPitch: 100,
         padding: 20,
-        sidePlateHeight: 60
+        sidePlateHeight: 60,
+        cutoutDepth: 40
     });
 
     const svg = useMemo(() => {
@@ -82,6 +83,14 @@ export function RouterTemplateGenerator() {
                                 type="number"
                                 value={params.sidePlateHeight}
                                 onChange={(e) => handleChange('sidePlateHeight', e.target.value)}
+                            />
+                        </div>
+                        <div className="input-group">
+                            <label>Cutout Depth (mm)</label>
+                            <input
+                                type="number"
+                                value={params.cutoutDepth}
+                                onChange={(e) => handleChange('cutoutDepth', e.target.value)}
                             />
                         </div>
                     </div>
