@@ -41,7 +41,8 @@ export class RouterTemplateCalculator {
 
         const firstSlotX = Math.max(padding, slotPitch + padding);
         const lastSlotX = firstSlotX + totalSlotsLengthX;
-        const topPlateWidthX = lastSlotX + padding;
+        // Make symmetric: Right margin = Left margin (firstSlotX)
+        const topPlateWidthX = lastSlotX + firstSlotX;
 
         // Top Plate Height Y
         // Slot starts at `materialThickness - radiusDiff` (relative to Inner Face).
@@ -49,21 +50,22 @@ export class RouterTemplateCalculator {
         // No, let's redefine Y=0 as the "Joint Edge" (where Side Plate attaches).
         // So Side Plate is at Y=0.
         // Inner Face is at Y = materialThickness.
-        // Slot starts at Y = materialThickness - radiusDiff.
-        // Slot ends at Y = materialThickness - radiusDiff + templateSlotLength.
+        const edgeMargin = materialThickness;
+        const slotStartY = edgeMargin + materialThickness - radiusDiff;
+        const slotEndY = slotStartY + templateSlotLength;
         // Top Plate extends to Y = SlotEnd + Padding.
 
         // Wait, if Y=0 is Joint Edge.
         // Top Plate goes from Y=0 to Y=Height.
         // Slot starts near Y=0.
 
-        const slotStartY = materialThickness - radiusDiff;
-        const slotEndY = slotStartY + templateSlotLength;
+        // Balance Top/Bottom Padding
+        // We want Dist(TopEdge, SlotStart) = Dist(BottomEdge, SlotEnd) = padding.
+        // Dist(TopEdge, SlotStart) = topOverhang + slotStartY.
+        // So topOverhang = padding - slotStartY.
+        const topOverhang = Math.max(0, padding - slotStartY);
 
-        const topPlateHeightY = Math.max(
-            slotEndY + padding,
-            100
-        );
+        const topPlateHeightY = topOverhang + slotStartY + templateSlotLength + padding;
 
         return {
             templateSlotLength,
@@ -74,7 +76,8 @@ export class RouterTemplateCalculator {
             offset,
             radiusDiff,
             firstSlotX,
-            slotStartY
+            slotStartY,
+            topOverhang
         };
     }
 
@@ -88,7 +91,8 @@ export class RouterTemplateCalculator {
             sidePlateHeightZ,
             radiusDiff,
             firstSlotX,
-            slotStartY
+            slotStartY,
+            topOverhang
         } = dims;
 
         const {
@@ -97,6 +101,8 @@ export class RouterTemplateCalculator {
             materialThickness,
             padding
         } = this.params;
+
+
 
         const gap = 10;
         // Total Height: 2 Top Plates + Gap + Side Plate (Height + Fingers)
@@ -112,135 +118,58 @@ export class RouterTemplateCalculator {
             .text { font-family: sans-serif; font-size: 5px; fill: red; }
         </style>`;
 
-        // --- Top Plate (Mortise Style) ---
-        // Y=0 is Joint Edge.
-        // Holes are located at Y = materialThickness / 2 ?
-        // Side Plate is `materialThickness` thick.
-        // Fingers are centered in that thickness? No, usually full thickness fingers.
-        // So Holes are `materialThickness` high.
-        // Located from Y=0 to Y=materialThickness.
-        // But we need to leave material for the "bridge" if we want.
-        // Usually box joints are flush.
-        // So holes are rectangles from Y=0 to Y=materialThickness?
-        // No, that would be an open slot.
-        // User said: "have the fingerjoints not on the edge but in the surface."
-        // This means enclosed holes (Mortises).
-        // So there is a strip of material between the hole and the edge?
-        // "Like in the second screenshot."
-        // Screenshot 2 shows holes set back from the edge.
-        // Let's assume the Side Plate fingers are offset?
-        // Or the Side Plate is attached *under* the Top Plate, but set back?
-        // No, usually Side Plate is flush with edge.
-        // If holes are "in the surface", then the fingers must go through the surface.
-        // If the fingers are at the edge of the Side Plate, and Side Plate is flush with Top Plate edge.
-        // Then holes must be at the edge?
-        // Unless the Side Plate is T-jointed?
-        // "L shaped".
-        // If L-shaped, usually corner to corner.
-        // If holes are "in the surface", maybe the Side Plate overlaps the Top Plate?
-        // Or the Top Plate overlaps the Side Plate (standard L).
-        // If Top overlaps Side, Side is *under* Top.
-        // Fingers of Side stick *up* into Top.
-        // If Side is flush with Top Edge (Y=0).
-        // Then Fingers are at Y=0 to Y=Thickness.
-        // If we want holes "in the surface" (enclosed), we need a margin at Y=0.
-        // This implies the Side Plate is NOT flush with Y=0?
-        // Or the Fingers are stepped?
-        // Or the user accepts that the "L" has a slight overhang?
-        // Let's assume we want a margin of `materialThickness` at the edge.
-        // So Side Plate is set back by `materialThickness`.
-        // So Holes are from Y=`materialThickness` to Y=`2*materialThickness`.
-        // And Side Plate Inner Face is at Y=`2*materialThickness`.
-        // This changes `slotStartY`!
-        // Let's assume a fixed margin for the holes.
-        // Margin = 5mm (or materialThickness).
-        // So Holes start at Y=Margin. Height = materialThickness.
-        // Side Plate Face is at Y=Margin + materialThickness?
-        // Or is Side Plate Face at Y=Margin? (Fingers flush with face).
-        // Usually fingers are flush with the face of the board they are cut into.
-        // So Side Plate Face is at Y=Margin + materialThickness.
-        // Let's use `edgeMargin = materialThickness`.
-
-        const edgeMargin = materialThickness; // Distance from edge to hole start
-
-        // Recalculate slotStartY based on this new geometry
-        // Side Plate Inner Face is at `edgeMargin + materialThickness`.
-        // Slot starts at `InnerFace - radiusDiff`.
-        // So `slotStartY` (relative to Top Edge Y=0) = `edgeMargin + materialThickness - radiusDiff`.
-
-        const realSlotStartY = edgeMargin + materialThickness - radiusDiff;
-
-        // Update Top Plate Height to accommodate this shift
-        // We need `realSlotStartY + templateSlotLength + padding`.
-        const realTopPlateHeightY = Math.max(
-            realSlotStartY + templateSlotLength + padding,
-            topPlateHeightY // Keep previous min
-        );
-
         const drawTopPlate = (offsetY, label) => {
             // Outline (Rectangle)
-            let path = `M 0,${offsetY} L ${topPlateWidthX},${offsetY} L ${topPlateWidthX},${offsetY + realTopPlateHeightY} L 0,${offsetY + realTopPlateHeightY} Z`;
+            let path = `M 0,${offsetY} L ${topPlateWidthX},${offsetY} L ${topPlateWidthX},${offsetY + topPlateHeightY} L 0,${offsetY + topPlateHeightY} Z`;
             svg += `<path class="cut" d="${path}" />`;
 
             // Mortise Holes
-            // Row of holes at Y = offsetY + edgeMargin
-            // Height = materialThickness.
-            // Width/Spacing determined by finger pattern.
+            // Row of holes at Y = offsetY + topOverhang + edgeMargin
+            const edgeMargin = materialThickness;
+            const holeY = offsetY + topOverhang + edgeMargin;
 
             const fingerCount = Math.floor(topPlateWidthX / 20);
             const fingerSize = topPlateWidthX / (fingerCount * 2 + 1);
 
             for (let i = 0; i < fingerCount * 2 + 1; i++) {
-                // Even i = Hole? Odd i = Solid?
-                // Side Plate: Even i = Slot (Low), Odd i = Finger (High).
-                // We need Holes where Side Plate has Fingers.
-                // So Odd i = Hole.
-
                 if (i % 2 !== 0) {
                     const x = topPlateWidthX - (i + 1) * fingerSize;
-                    const y = offsetY + edgeMargin;
-                    svg += `<rect class="cut" x="${x}" y="${y}" width="${fingerSize}" height="${materialThickness}" />`;
+                    svg += `<rect class="cut" x="${x}" y="${holeY}" width="${fingerSize}" height="${materialThickness}" />`;
                 }
             }
 
             // Slots
             for (let i = 0; i < slotCount; i++) {
                 const cx = firstSlotX + i * slotPitch;
-                const cy = offsetY + realSlotStartY + templateSlotLength / 2;
+                // Slot Y relative to Top Edge: topOverhang + slotStartY + Length/2
+                const cy = offsetY + topOverhang + slotStartY + templateSlotLength / 2;
 
                 const x = cx - templateSlotWidth / 2;
                 const y = cy - templateSlotLength / 2;
                 const r = this.params.copyRingDiameter / 2;
 
                 svg += `<rect class="cut" x="${x}" y="${y}" width="${templateSlotWidth}" height="${templateSlotLength}" rx="${r}" />`;
-                svg += `<line class="ref" x1="${cx}" y1="${offsetY + realSlotStartY}" x2="${cx}" y2="${offsetY + realSlotStartY + templateSlotLength}" />`;
+                svg += `<line class="ref" x1="${cx}" y1="${offsetY + topOverhang + slotStartY}" x2="${cx}" y2="${offsetY + topOverhang + slotStartY + templateSlotLength}" />`;
             }
 
             // Index Hole
             const indexX = firstSlotX - slotPitch;
-            const indexY = offsetY + realSlotStartY + templateSlotLength / 2;
+            const indexY = offsetY + topOverhang + slotStartY + templateSlotLength / 2;
             const indexHoleR = 2.5;
 
             svg += `<circle class="engrave" cx="${indexX}" cy="${indexY}" r="${indexHoleR}" />`;
             svg += `<text x="${indexX}" y="${indexY - 4}" class="text" text-anchor="middle">Index</text>`;
 
-            svg += `<text x="5" y="${offsetY + realTopPlateHeightY - 5}" class="text">${label}</text>`;
+            svg += `<text x="5" y="${offsetY + topPlateHeightY - 5}" class="text">${label}</text>`;
         };
 
         drawTopPlate(0, "Top Plate 1");
-        drawTopPlate(realTopPlateHeightY + gap, "Top Plate 2");
+        drawTopPlate(topPlateHeightY + gap, "Top Plate 2");
 
         // --- Side Plate ---
-        const sideOffsetY = (realTopPlateHeightY + gap) * 2;
+        const sideOffsetY = (topPlateHeightY + gap) * 2;
 
-        // Side Plate Geometry
-        // Fingers stick UP.
-        // Finger Height = 2 * materialThickness.
-        // Base Height = sidePlateHeightZ.
-        // Total Height = sidePlateHeightZ + 2*materialThickness.
-        // Top Edge (Finger Tips) at `sideOffsetY`.
-        // Shoulder (Finger Base) at `sideOffsetY + 2*materialThickness`.
-        // Bottom Edge at `sideOffsetY + 2*materialThickness + sidePlateHeightZ`.
+
 
         const fingerHeight = materialThickness * 2;
         const shoulderY = sideOffsetY + fingerHeight;
