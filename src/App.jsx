@@ -5,7 +5,8 @@ import { Configurator } from './components/Configurator'
 import { Visualizer } from './components/Visualizer'
 import { StatsPanel } from './components/StatsPanel'
 import { ComparisonView } from './components/ComparisonView'
-import { Layout, List } from 'lucide-react'
+import { RouterTemplateGenerator } from './components/RouterTemplateGenerator'
+import { Layout, List, Scissors } from 'lucide-react'
 
 function App() {
   // Current active config
@@ -20,7 +21,7 @@ function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [viewMode, setViewMode] = useState('editor'); // 'editor' | 'comparison'
+  const [viewMode, setViewMode] = useState('editor'); // 'editor' | 'comparison' | 'router-template'
 
   // Persist current config
   useEffect(() => {
@@ -75,6 +76,12 @@ function App() {
           >
             <List size={18} style={{ marginRight: '8px' }} /> Compare ({savedConfigs.length})
           </button>
+          <button
+            className={`btn ${viewMode === 'router-template' ? 'btn-primary' : ''}`}
+            onClick={() => setViewMode('router-template')}
+          >
+            <Scissors size={18} style={{ marginRight: '8px' }} /> Router Template
+          </button>
         </div>
       </header>
 
@@ -92,12 +99,14 @@ function App() {
               <StatsPanel metrics={results.metrics} />
             </section>
           </div>
-        ) : (
+        ) : viewMode === 'comparison' ? (
           <ComparisonView
             savedConfigs={savedConfigs}
             onLoad={handleLoad}
             onDelete={handleDelete}
           />
+        ) : (
+          <RouterTemplateGenerator />
         )}
       </main>
     </div>
